@@ -1,0 +1,17 @@
+{
+  "name": "api-filmes",
+  "version": "1.0.0",
+  "description": "API REST simples para cadastro de filmes",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
