@@ -60,3 +60,10 @@ Exemplo de resposta:
 ```bash
 npm test
 ```
+
+## Deploy na AWS
+
+O projeto inclui Dockerfile e um workflow de CI/CD para deploy em uma instância
+EC2 usando GitHub Actions, Amazon ECR e AWS Systems Manager.
+
+Consulte o passo a passo completo em [DEPLOY_AWS.md](DEPLOY_AWS.md).

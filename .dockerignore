@@ -1,0 +1,8 @@
+.git
+.github
+node_modules
+npm-debug.log*
+test
+README.md
+DEPLOY_AWS.md
+.env*
