@@ -33,6 +33,19 @@ services:
         condition: service_healthy
     restart: 'no'
 
+  seed:
+    build:
+      context: .
+      target: runtime
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-api_filmes}:${POSTGRES_PASSWORD:-api_filmes}@postgres:5432/${POSTGRES_DB:-api_filmes}?schema=public
+    command: ['npm', 'run', 'prisma:seed']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: 'no'
+
   api:
     build:
       context: .
@@ -52,6 +65,8 @@ services:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      seed:
         condition: service_completed_successfully
     healthcheck:
       test:

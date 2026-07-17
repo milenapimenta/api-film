@@ -21,9 +21,10 @@ Em push para `main`, depois dessas verificações:
 1. publica no ECR as tags do SHA e `latest`;
 2. busca a `DATABASE_URL` no Parameter Store;
 3. executa `prisma migrate deploy` em um contêiner efêmero;
-4. substitui o contêiner da API;
-5. aguarda o health check;
-6. se a aplicação não ficar saudável, restaura a imagem anterior.
+4. executa o seed idempotente de dados mockados em outro contêiner efêmero;
+5. substitui o contêiner da API;
+6. aguarda o health check;
+7. se a aplicação não ficar saudável, restaura a imagem anterior.
 
 Migrations aplicadas não sofrem rollback automático. Toda migration de produção
 deve ser compatível com a versão anterior da aplicação durante a janela de deploy.
@@ -201,7 +202,15 @@ docker run --rm \
   -e NODE_ENV=production \
   -e DATABASE_URL \
   IMAGEM npm run prisma:migrate:deploy
+
+docker run --rm \
+  -e NODE_ENV=production \
+  -e DATABASE_URL \
+  IMAGEM npm run prisma:seed
 ```
+
+O seed pode rodar em todos os deploys: ele cria somente os filmes mockados que
+ainda não existam com o mesmo título e ano.
 
 Não use `prisma migrate dev` nem `prisma migrate reset` em produção. Revise o SQL
 de cada migration e faça backup antes de alterações destrutivas. Para bases que já

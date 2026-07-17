@@ -87,8 +87,8 @@ npm run prisma:seed
 
 ## Execução com Docker Compose
 
-O Compose sobe o PostgreSQL, executa `prisma migrate deploy` uma única vez e só
-depois inicia a API:
+O Compose sobe o PostgreSQL, executa `prisma migrate deploy`, cria os dados
+mockados com o seed e só depois inicia a API:
 
 ```bash
 docker compose up --build -d
@@ -104,6 +104,18 @@ docker compose down
 
 Para apagar também o volume local, use `docker compose down -v`. Esse comando é
 destrutivo e nunca deve ser usado contra dados que precisem ser preservados.
+
+### Dados mockados
+
+O serviço `seed` cadastra 12 filmes depois das migrations, inclusive quando o
+Compose é executado com `NODE_ENV=production`. A operação usa título e ano para
+identificar registros existentes, portanto novos deploys não duplicam os dados.
+
+Para executar o mesmo seed manualmente:
+
+```bash
+npm run prisma:seed
+```
 
 ## Rotas
 

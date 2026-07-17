@@ -168,6 +168,19 @@ describe('API de filmes (e2e)', () => {
     );
   });
 
+  it('executa o seed mais de uma vez sem duplicar os dados mockados', async () => {
+    const seedOptions = {
+      cwd: resolve(__dirname, '..'),
+      env: process.env,
+      stdio: 'pipe' as const,
+    };
+
+    execFileSync('npm', ['run', 'prisma:seed'], seedOptions);
+    execFileSync('npm', ['run', 'prisma:seed'], seedOptions);
+
+    await expect(prisma.filme.count()).resolves.toBe(12);
+  });
+
   it('pagina de forma determinística sem mudar o formato de array', async () => {
     await prisma.filme.createMany({
       data: [

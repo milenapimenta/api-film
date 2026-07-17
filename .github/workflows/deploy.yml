@@ -85,8 +85,6 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
-          DATABASE_URL_PARAMETER: ${{ vars.DATABASE_URL_PARAMETER }}
-          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
         run: |
           set -Eeuo pipefail
 
@@ -104,6 +102,8 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
+          DATABASE_URL_PARAMETER: ${{ vars.DATABASE_URL_PARAMETER }}
+          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
         run: |
           set -Eeuo pipefail
 
@@ -126,6 +126,7 @@ jobs:
                 ("printf \"%s\" \"$ECR_PASSWORD\" | docker login --username AWS --password-stdin " + $registry),
                 ("docker pull " + $image),
                 ("docker run --rm -e NODE_ENV=production -e DATABASE_URL " + $image + " npm run prisma:migrate:deploy"),
+                ("docker run --rm -e NODE_ENV=production -e DATABASE_URL " + $image + " npm run prisma:seed"),
                 "OLD_IMAGE=$(docker inspect --format={{.Config.Image}} api-filmes 2>/dev/null || true)",
                 "docker rm -f api-filmes 2>/dev/null || true",
                 ("docker run -d --name api-filmes --restart unless-stopped -p 80:3000 -e NODE_ENV=production -e DATABASE_URL -e CORS_ORIGIN -e TRUST_PROXY=true " + $image),
