@@ -89,8 +89,9 @@ jobs:
             --arg image "$IMAGE_URI" \
             '{
               commands: [
-                "set -Eeuo pipefail",
-                ("aws ecr get-login-password --region " + $region + " | docker login --username AWS --password-stdin " + $registry),
+                "set -eu",
+                ("ECR_PASSWORD=$(aws ecr get-login-password --region " + $region + ")"),
+                ("printf \"%s\" \"$ECR_PASSWORD\" | docker login --username AWS --password-stdin " + $registry),
                 ("docker pull " + $image),
                 "OLD_IMAGE=$(docker inspect --format={{.Config.Image}} api-filmes 2>/dev/null || true)",
                 "docker rm -f api-filmes 2>/dev/null || true",
