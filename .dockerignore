@@ -1,8 +1,13 @@
 .git
 .github
+.env
+.env.*
+!.env.example
 node_modules
-npm-debug.log*
+dist
+coverage
 test
+*.log
+npm-debug.log*
 README.md
 DEPLOY_AWS.md
-.env*

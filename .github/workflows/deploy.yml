@@ -12,8 +12,12 @@ permissions:
 
 jobs:
   test:
-    name: Testes
+    name: Qualidade e testes
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://api_filmes:api_filmes@localhost:5432/api_filmes_test?schema=public
+      CORS_ORIGIN: http://localhost:3000
     steps:
       - name: Baixar o código
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -27,8 +31,28 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Executar testes
+      - name: Validar Prisma
+        run: |
+          npx prisma validate
+          npx prisma generate
+
+      - name: Executar lint
+        run: npm run lint
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Executar testes unitários
         run: npm test
+
+      - name: Executar testes de integração
+        run: npm run test:e2e
+
+      - name: Validar Docker Compose
+        run: docker compose config
+
+      - name: Construir a imagem local
+        run: docker compose build
 
   deploy:
     name: Deploy em produção
@@ -78,6 +102,8 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
+          DATABASE_URL_PARAMETER: ${{ vars.DATABASE_URL_PARAMETER }}
+          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
         run: |
           set -Eeuo pipefail
 
@@ -87,19 +113,27 @@ jobs:
             --arg region "$AWS_REGION" \
             --arg registry "$REGISTRY" \
             --arg image "$IMAGE_URI" \
+            --arg databaseParameter "$DATABASE_URL_PARAMETER" \
+            --arg corsOrigin "$CORS_ORIGIN" \
             '{
               commands: [
                 "set -eu",
+                ("DATABASE_URL_PARAMETER=" + ($databaseParameter | @sh)),
+                ("CORS_ORIGIN=" + ($corsOrigin | @sh)),
+                ("DATABASE_URL=$(aws ssm get-parameter --region " + $region + " --name \"$DATABASE_URL_PARAMETER\" --with-decryption --query Parameter.Value --output text)"),
+                "export DATABASE_URL CORS_ORIGIN",
                 ("ECR_PASSWORD=$(aws ecr get-login-password --region " + $region + ")"),
                 ("printf \"%s\" \"$ECR_PASSWORD\" | docker login --username AWS --password-stdin " + $registry),
                 ("docker pull " + $image),
+                ("docker run --rm -e NODE_ENV=production -e DATABASE_URL " + $image + " npm run prisma:migrate:deploy"),
+                ("docker run --rm -e NODE_ENV=production -e DATABASE_URL " + $image + " npm run prisma:seed"),
                 "OLD_IMAGE=$(docker inspect --format={{.Config.Image}} api-filmes 2>/dev/null || true)",
                 "docker rm -f api-filmes 2>/dev/null || true",
-                ("docker run -d --name api-filmes --restart unless-stopped -p 80:3000 -e NODE_ENV=production " + $image),
+                ("docker run -d --name api-filmes --restart unless-stopped -p 80:3000 -e NODE_ENV=production -e DATABASE_URL -e CORS_ORIGIN -e TRUST_PROXY=true " + $image),
                 "for i in $(seq 1 12); do STATUS=$(docker inspect --format={{.State.Health.Status}} api-filmes 2>/dev/null || true); if [ \"$STATUS\" = \"healthy\" ]; then docker image prune -af; exit 0; fi; if [ \"$STATUS\" = \"unhealthy\" ]; then break; fi; sleep 5; done",
                 "docker logs api-filmes || true",
                 "docker rm -f api-filmes 2>/dev/null || true",
-                "if [ -n \"$OLD_IMAGE\" ]; then docker run -d --name api-filmes --restart unless-stopped -p 80:3000 -e NODE_ENV=production \"$OLD_IMAGE\"; fi",
+                "if [ -n \"$OLD_IMAGE\" ]; then docker run -d --name api-filmes --restart unless-stopped -p 80:3000 -e NODE_ENV=production -e DATABASE_URL -e CORS_ORIGIN -e TRUST_PROXY=true \"$OLD_IMAGE\"; fi",
                 "exit 1"
               ]
             }' > ssm-parameters.json
